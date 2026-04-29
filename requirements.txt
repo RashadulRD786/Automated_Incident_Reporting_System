@@ -1,0 +1,41 @@
+# DHL Incident Management System — System Requirements
+# This is a Node.js project. Dependencies are managed via package.json / npm.
+# Run `npm install` in both backend/ and frontend/ to install all packages.
+
+# ── Runtime ───────────────────────────────────────────────────────────────────
+Node.js    >= 18.0.0   (tested on v24.x)
+npm        >= 9.0.0
+
+# ── Backend packages (backend/package.json) ───────────────────────────────────
+express          ^4.18.0    # HTTP server framework
+better-sqlite3   ^12.0.0    # SQLite database driver
+jsonwebtoken     ^9.0.0     # JWT authentication
+bcryptjs         ^2.4.3     # Password hashing
+cors             ^2.8.5     # Cross-origin resource sharing
+dotenv           ^16.0.0    # Environment variable loader
+multer           ^2.0.0     # Multipart file upload handling
+nodemailer       ^6.9.0     # Email sending (password reset)
+
+# ── Frontend packages (frontend/package.json) ─────────────────────────────────
+react            ^18.2.0    # UI library
+react-dom        ^18.2.0    # React DOM renderer
+react-router-dom ^6.21.0    # Client-side routing
+axios            ^1.6.0     # HTTP client
+recharts         ^2.10.0    # Chart components
+
+# ── Frontend dev / build tools ────────────────────────────────────────────────
+vite             ^5.0.0     # Frontend build tool and dev server
+@vitejs/plugin-react ^4.2.0 # Vite React plugin
+tailwindcss      ^3.4.0     # Utility-first CSS framework
+postcss          ^8.4.0     # CSS processor
+autoprefixer     ^10.4.0    # CSS vendor prefixing
+
+# ── Setup instructions ────────────────────────────────────────────────────────
+# 1. Install backend:   cd backend  && npm install
+# 2. Install frontend:  cd frontend && npm install
+# 3. Seed database:     cd backend  && node database/seed.js
+# 4. Configure email:   edit backend/.env (copy from backend/.env.example)
+# 5. Start app:         ./start.sh
+#    or manually:
+#      cd backend  && node server.js        (port 5000)
+#      cd frontend && npx vite --port 3000  (port 3000)
