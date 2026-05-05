@@ -5,6 +5,7 @@ const STATUS_STYLES = {
   'Pending':     'bg-amber-100 text-amber-800',
   'Resolved':    'bg-teal-100 text-teal-800',
   'Closed':      'bg-gray-300 text-gray-700',
+  'Cancelled':   'bg-red-50 text-red-400',
 };
 
 export default function StatusBadge({ status }) {

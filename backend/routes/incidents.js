@@ -5,24 +5,25 @@ const auth = require('../middleware/authMiddleware');
 const router = express.Router();
 
 const VALID_TRANSITIONS = {
-  'New':         ['Assigned'],
-  'Assigned':    ['In Progress'],
+  'New':         ['Assigned', 'Cancelled'],
+  'Assigned':    ['In Progress', 'Cancelled'],
   'In Progress': ['Pending', 'Resolved'],
   'Pending':     ['In Progress', 'Resolved'],
   'Resolved':    ['Closed'],
 };
 
 router.get('/', auth, (req, res) => {
-  const { status, severity, category, search, page = 1, limit = 20 } = req.query;
+  const { status, severity, category, sla_state, search, page = 1, limit = 20 } = req.query;
   const offset = (parseInt(page) - 1) * parseInt(limit);
   const now = Math.floor(Date.now() / 1000);
 
   const conditions = [];
   const params = [];
 
-  if (status) { conditions.push('status = ?'); params.push(status); }
-  if (severity) { conditions.push('severity = ?'); params.push(severity); }
-  if (category) { conditions.push('category = ?'); params.push(category); }
+  if (status)    { conditions.push('status = ?');    params.push(status); }
+  if (severity)  { conditions.push('severity = ?');  params.push(severity); }
+  if (category)  { conditions.push('category = ?');  params.push(category); }
+  if (sla_state) { conditions.push('sla_state = ?'); params.push(sla_state); }
   if (search) {
     conditions.push('(title LIKE ? OR summary LIKE ? OR incident_ref LIKE ?)');
     const like = `%${search}%`;
@@ -88,22 +89,25 @@ router.patch('/:id/status', auth, (req, res) => {
   }
 
   const now = Math.floor(Date.now() / 1000);
-  const updates = { status: newStatus, updated_at: now };
-  if (newStatus === 'Resolved') updates.resolved_at = now;
-  if (newStatus === 'Closed') updates.closed_at = now;
 
-  db.prepare(`
-    UPDATE incidents SET status=?, updated_at=?
-    ${newStatus === 'Resolved' ? ', resolved_at=?' : ''}
-    ${newStatus === 'Closed' ? ', closed_at=?' : ''}
-    WHERE id=?
-  `).run(
-    newStatus,
-    now,
-    ...(newStatus === 'Resolved' ? [now] : []),
-    ...(newStatus === 'Closed' ? [now] : []),
-    id
-  );
+  const isTerminal = ['Resolved', 'Closed', 'Cancelled'].includes(newStatus);
+  const newSlaState = isTerminal ? 'COMPLETED' : incident.sla_state;
+
+  // Set first_response_at on first transition away from New
+  const firstResponseAt = (!incident.first_response_at && incident.status === 'New')
+    ? now
+    : incident.first_response_at;
+
+  let sql = `UPDATE incidents SET status=?, updated_at=?, sla_state=?, first_response_at=?`;
+  const args = [newStatus, now, newSlaState, firstResponseAt];
+
+  if (newStatus === 'Resolved')  { sql += ', resolved_at=?'; args.push(now); }
+  if (newStatus === 'Closed')    { sql += ', closed_at=?';   args.push(now); }
+
+  sql += ' WHERE id=?';
+  args.push(id);
+
+  db.prepare(sql).run(...args);
 
   db.prepare(`
     INSERT INTO audit_trail (incident_id, actor, action, previous_value, new_value)

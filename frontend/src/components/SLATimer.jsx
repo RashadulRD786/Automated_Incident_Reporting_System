@@ -7,7 +7,7 @@ function formatRemaining(seconds) {
   return `${h}h ${m}m`;
 }
 
-export default function SLATimer({ sla_deadline, is_overdue, sla_hours }) {
+export default function SLATimer({ sla_deadline, sla_state, is_overdue }) {
   const [remaining, setRemaining] = useState(
     sla_deadline - Math.floor(Date.now() / 1000)
   );
@@ -19,7 +19,17 @@ export default function SLATimer({ sla_deadline, is_overdue, sla_hours }) {
     return () => clearInterval(interval);
   }, [sla_deadline]);
 
-  if (is_overdue || remaining <= 0) {
+  const state = sla_state || (is_overdue ? 'BREACHED' : 'ON_TRACK');
+
+  if (state === 'COMPLETED') {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500">
+        Resolved
+      </span>
+    );
+  }
+
+  if (state === 'BREACHED' || remaining <= 0) {
     return (
       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700 border border-red-300">
         OVERDUE
@@ -27,12 +37,10 @@ export default function SLATimer({ sla_deadline, is_overdue, sla_hours }) {
     );
   }
 
-  const totalSeconds = (sla_hours || 48) * 3600;
-  const pct = (remaining / totalSeconds) * 100;
-
-  let colorClass = 'text-green-600';
-  if (pct < 20) colorClass = 'text-red-600 font-semibold';
-  else if (pct < 50) colorClass = 'text-amber-600';
+  const colorClass =
+    state === 'CRITICAL' ? 'text-red-600 font-semibold' :
+    state === 'AT_RISK'  ? 'text-amber-600' :
+    'text-green-600';
 
   return (
     <span className={`text-sm font-mono ${colorClass}`}>

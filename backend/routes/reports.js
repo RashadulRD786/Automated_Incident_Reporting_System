@@ -14,7 +14,7 @@ router.get('/dashboard', auth, (req, res) => {
   ).get(todayStart).c;
 
   const pending = db.prepare(
-    "SELECT COUNT(*) as c FROM incidents WHERE status NOT IN ('Resolved','Closed')"
+    "SELECT COUNT(*) as c FROM incidents WHERE status NOT IN ('Resolved','Closed','Cancelled')"
   ).get().c;
 
   const resolved_today = db.prepare(
@@ -35,14 +35,14 @@ router.get('/dashboard', auth, (req, res) => {
 
   const critical_watchlist = db.prepare(`
     SELECT incident_ref, category, primary_department, sla_deadline,
-           (sla_deadline - ?) as time_remaining, severity, id, status
+           (sla_deadline - ?) as time_remaining, severity, id, status,
+           sla_state, created_at, sla_hours
     FROM incidents
-    WHERE severity IN ('Critical','High')
-    AND status NOT IN ('Resolved','Closed')
-    AND (? - created_at) > (sla_hours * 3600 * 0.5)
+    WHERE sla_state IN ('AT_RISK','CRITICAL','BREACHED')
+    AND status NOT IN ('Resolved','Closed','Cancelled')
     ORDER BY sla_deadline ASC
     LIMIT 10
-  `).all(now, now);
+  `).all(now);
 
   const recent_activity = db.prepare(`
     SELECT a.created_at, a.actor, a.action, i.incident_ref, i.id as incident_id

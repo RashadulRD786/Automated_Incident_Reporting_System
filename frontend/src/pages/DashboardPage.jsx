@@ -138,16 +138,20 @@ export default function DashboardPage() {
                     <tr className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
                       <th className="px-4 py-2 text-left">Ref</th>
                       <th className="px-4 py-2 text-left">Category</th>
+                      <th className="px-4 py-2 text-left">SLA State</th>
                       <th className="px-4 py-2 text-left">Dept</th>
                       <th className="px-4 py-2 text-right">Time Left</th>
                     </tr>
                   </thead>
                   <tbody>
                     {data?.critical_watchlist?.map((inc) => {
-                      const pct = inc.time_remaining > 0
-                        ? (inc.time_remaining / ((inc.sla_hours || 48) * 3600)) * 100
-                        : 0;
-                      const borderColor = pct < 20 ? 'border-l-red-500' : pct < 50 ? 'border-l-amber-400' : 'border-l-transparent';
+                      const isCriticalOrBreached = ['CRITICAL','BREACHED'].includes(inc.sla_state);
+                      const borderColor = isCriticalOrBreached ? 'border-l-red-500' : 'border-l-amber-400';
+                      const SLA_STATE_STYLE = {
+                        AT_RISK:  'bg-amber-100 text-amber-800',
+                        CRITICAL: 'bg-red-100 text-red-700',
+                        BREACHED: 'bg-red-200 text-red-900 font-bold',
+                      };
                       return (
                         <tr
                           key={inc.id}
@@ -155,10 +159,15 @@ export default function DashboardPage() {
                           className={`border-l-4 ${borderColor} hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0`}
                         >
                           <td className="px-4 py-2.5 font-mono text-xs text-gray-700">{inc.incident_ref}</td>
-                          <td className="px-4 py-2.5 text-gray-700">{inc.category}</td>
+                          <td className="px-4 py-2.5 text-gray-700 text-xs">{inc.category}</td>
+                          <td className="px-4 py-2.5">
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${SLA_STATE_STYLE[inc.sla_state] || 'bg-gray-100 text-gray-600'}`}>
+                              {inc.sla_state}
+                            </span>
+                          </td>
                           <td className="px-4 py-2.5 text-gray-500 text-xs">{inc.primary_department}</td>
                           <td className="px-4 py-2.5 text-right">
-                            <span className={`text-xs font-mono font-medium ${inc.time_remaining <= 0 ? 'text-red-600' : pct < 20 ? 'text-red-600' : pct < 50 ? 'text-amber-600' : 'text-green-600'}`}>
+                            <span className={`text-xs font-mono font-medium ${inc.sla_state === 'BREACHED' ? 'text-red-700 font-bold' : inc.sla_state === 'CRITICAL' ? 'text-red-600' : 'text-amber-600'}`}>
                               {formatTimeRemaining(inc.time_remaining)}
                             </span>
                           </td>
