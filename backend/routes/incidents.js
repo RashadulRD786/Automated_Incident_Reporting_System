@@ -49,6 +49,15 @@ router.get('/', auth, (req, res) => {
   });
 });
 
+router.get('/recent-summaries', (req, res) => {
+  const rows = db.prepare(`
+    SELECT summary FROM incidents 
+    ORDER BY created_at DESC LIMIT 10
+  `).all();
+  const summaries = rows.map(r => r.summary).join('\n---\n');
+  res.json({ summaries: summaries || 'No recent incidents' });
+});
+
 router.get('/:id', auth, (req, res) => {
   const { id } = req.params;
 
@@ -143,5 +152,7 @@ router.patch('/:id/tasks/:taskId', auth, (req, res) => {
 
   res.json({ message: 'Task updated', all_complete: allComplete });
 });
+
+
 
 module.exports = router;

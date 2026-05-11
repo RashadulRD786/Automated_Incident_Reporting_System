@@ -292,18 +292,48 @@ router.get('/queue', (req, res) => {
   res.json(rows);
 });
 
-router.get('/:id/content', (req, res) => {
+router.get('/:id/content', async (req, res) => {
   const record = db.prepare('SELECT * FROM raw_inputs WHERE id = ?').get(req.params.id);
   if (!record) return res.status(404).json({ error: 'Not found' });
-  
   try {
-    const fs = require('fs');
-    const filePath = record.file_path || `./uploads/${record.filename}`;
-    const content = fs.readFileSync(filePath, 'utf8');
+    let content;
+    if (record.raw_text) {
+      content = record.raw_text;
+    } else if (record.content_type === 'text') {
+      const fs = require('fs');
+      content = require('fs').readFileSync(record.file_path, 'utf8');
+    } else if (record.content_type === 'pdf') {
+      const pdfParse = require('pdf-parse');
+      const fs = require('fs');
+      const buffer = fs.readFileSync(record.file_path);
+      const data = await pdfParse(buffer);
+      content = data.text;
+    } else if (record.content_type === 'docx') {
+      const mammoth = require('mammoth');
+      const result = await mammoth.extractRawText({ path: record.file_path });
+      content = result.value;
+    } else {
+      return res.json({ content: null, content_type: record.content_type, requires_image_analysis: true });
+    }
     res.json({ content, content_type: record.content_type });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
 
+router.get('/:id/file', (req, res) => {
+  const record = db.prepare('SELECT * FROM raw_inputs WHERE id = ?').get(req.params.id);
+  if (!record) return res.status(404).json({ error: 'Not found' });
+  try {
+    const fs = require('fs');
+    const fileBuffer = fs.readFileSync(record.file_path);
+    const base64 = fileBuffer.toString('base64');
+    res.json({ base64, filename: record.filename, content_type: record.content_type });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 module.exports = router;
+
+
