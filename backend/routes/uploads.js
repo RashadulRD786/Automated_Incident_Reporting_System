@@ -128,10 +128,10 @@ router.post('/file', auth, (req, res) => {
 
     const rawInputId = result.lastInsertRowid;
 
-    const queueItemId = await addToUiPathQueue(rawInputId, filePath, contentType, filename);
-    if (queueItemId) {
-      db.prepare('UPDATE raw_inputs SET queue_item_id = ? WHERE id = ?').run(String(queueItemId), rawInputId);
-    }
+    //const queueItemId = await addToUiPathQueue(rawInputId, filePath, contentType, filename);
+    //if (queueItemId) {
+      //db.prepare('UPDATE raw_inputs SET queue_item_id = ? WHERE id = ?').run(String(queueItemId), rawInputId);
+    //}
 
     res.json({ id: rawInputId, filename, status: 'pending' });
   });
@@ -148,10 +148,10 @@ router.post('/text', auth, async (req, res) => {
 
   const rawInputId = result.lastInsertRowid;
 
-  const queueItemId = await addToUiPathQueue(rawInputId, null, 'text', null);
-  if (queueItemId) {
-    db.prepare('UPDATE raw_inputs SET queue_item_id = ? WHERE id = ?').run(String(queueItemId), rawInputId);
-  }
+  //const queueItemId = await addToUiPathQueue(rawInputId, null, 'text', null);
+  //if (queueItemId) {
+    //db.prepare('UPDATE raw_inputs SET queue_item_id = ? WHERE id = ?').run(String(queueItemId), rawInputId);
+  //}
 
   res.json({ id: rawInputId, status: 'pending' });
 });
@@ -279,7 +279,7 @@ router.patch('/:id/status', (req, res) => {
   res.json({ message: 'Updated' });
 });
 
-router.get('/queue', auth, (req, res) => {
+router.get('/queue', (req, res) => {
   const { status } = req.query;
   const base = `
     SELECT id, filename, source_type, content_type, processing_status,
@@ -290,6 +290,20 @@ router.get('/queue', auth, (req, res) => {
     ? db.prepare(base + ' WHERE processing_status = ? ORDER BY uploaded_at DESC').all(status)
     : db.prepare(base + ' ORDER BY uploaded_at DESC').all();
   res.json(rows);
+});
+
+router.get('/:id/content', (req, res) => {
+  const record = db.prepare('SELECT * FROM raw_inputs WHERE id = ?').get(req.params.id);
+  if (!record) return res.status(404).json({ error: 'Not found' });
+  
+  try {
+    const fs = require('fs');
+    const filePath = record.file_path || `./uploads/${record.filename}`;
+    const content = fs.readFileSync(filePath, 'utf8');
+    res.json({ content, content_type: record.content_type });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 module.exports = router;
