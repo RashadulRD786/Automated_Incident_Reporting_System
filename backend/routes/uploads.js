@@ -4,6 +4,9 @@ const path = require('path');
 const db = require('../database/db');
 const auth = require('../middleware/authMiddleware');
 const router = express.Router();
+const pdfParse = require('pdf-parse');
+const mammoth = require('mammoth');
+const fs = require('fs');
 
 const getSLAHours = (severity, category) => {
   if (severity === 'Critical') return 6;
