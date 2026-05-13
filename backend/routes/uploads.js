@@ -4,7 +4,7 @@ const path = require('path');
 const db = require('../database/db');
 const auth = require('../middleware/authMiddleware');
 const router = express.Router();
-const pdfParse = require('pdf-parse');
+const pdfParse = require('pdf-parse/lib/pdf-parse.js');
 const mammoth = require('mammoth');
 const fs = require('fs');
 
@@ -209,7 +209,7 @@ router.get('/:id/content', async (req, res) => {
     } else if (record.content_type === 'text') {
       content = require('fs').readFileSync(record.file_path, 'utf8');
     } else if (record.content_type === 'pdf') {
-      const pdfParse = require('pdf-parse');
+      const pdfParse = require('pdf-parse/lib/pdf-parse.js');
       const buffer = require('fs').readFileSync(record.file_path);
       const data = await pdfParse(buffer);
       content = data.text;
