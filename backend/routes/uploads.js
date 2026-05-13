@@ -48,13 +48,32 @@ router.post('/file', auth, (req, res) => {
   upload.single('file')(req, res, async (err) => {
     if (err) return res.status(400).json({ error: err.message });
     if (!req.file) return res.status(400).json({ error: 'No file provided' });
-    const { filename, mimetype } = req.file;
+    const { filename, mimetype, path: tempPath } = req.file;
     const contentType = mimeToContentType(mimetype);
     const filePath = path.join(__dirname, '..', 'uploads', filename);
+
+    let rawText = null;
+    try {
+      if (contentType === 'text') {
+        rawText = fs.readFileSync(tempPath, 'utf8');
+      } else if (contentType === 'pdf') {
+        const buffer = fs.readFileSync(tempPath);
+        const data = await pdfParse(buffer);
+        rawText = data.text;
+      } else if (contentType === 'docx') {
+        const result = await mammoth.extractRawText({ path: tempPath });
+        rawText = result.value;
+      }
+      // images: rawText stays null, handled by Image Analysis in UiPath
+    } catch (e) {
+      console.warn('[File extraction error]', e.message);
+    }
+
     const result = await db.prepare(`
-      INSERT INTO raw_inputs (filename, file_path, source_type, content_type, processing_status)
-      VALUES (?, ?, 'manual', ?, 'pending')
-    `).run(filename, filePath, contentType);
+      INSERT INTO raw_inputs (filename, file_path, source_type, content_type, raw_text, processing_status)
+      VALUES (?, ?, 'manual', ?, ?, 'pending')
+    `).run(filename, filePath, contentType, rawText);
+
     res.json({ id: result.lastInsertRowid, filename, status: 'pending' });
   });
 });
