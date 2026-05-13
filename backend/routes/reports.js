@@ -1,39 +1,44 @@
 const express = require('express');
 const db = require('../database/db');
 const auth = require('../middleware/authMiddleware');
-
 const router = express.Router();
 
-router.get('/dashboard', auth, (req, res) => {
+router.get('/dashboard', auth, async (req, res) => {
   const now = Math.floor(Date.now() / 1000);
   const todayStart = now - (now % 86400);
   const yesterdayStart = todayStart - 86400;
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-  const total_today = db.prepare(
+  const total_today_row = await db.prepare(
     'SELECT COUNT(*) as c FROM incidents WHERE created_at >= ?'
-  ).get(todayStart).c;
+  ).get(todayStart);
+  const total_today = parseInt(total_today_row.c);
 
-  const pending = db.prepare(
+  const pending_row = await db.prepare(
     "SELECT COUNT(*) as c FROM incidents WHERE status NOT IN ('Resolved','Closed','Cancelled')"
-  ).get().c;
+  ).get();
+  const pending = parseInt(pending_row.c);
 
-  const resolved_today = db.prepare(
+  const resolved_today_row = await db.prepare(
     "SELECT COUNT(*) as c FROM incidents WHERE resolved_at >= ? AND status IN ('Resolved','Closed')"
-  ).get(todayStart).c;
+  ).get(todayStart);
+  const resolved_today = parseInt(resolved_today_row.c);
 
-  const overdue = db.prepare(
-    "SELECT COUNT(*) as c FROM incidents WHERE is_overdue = 1"
-  ).get().c;
+  const overdue_row = await db.prepare(
+    "SELECT COUNT(*) as c FROM incidents WHERE sla_state = 'BREACHED' AND status NOT IN ('Resolved','Closed','Cancelled')"
+  ).get();
+  const overdue = parseInt(overdue_row.c);
 
-  const yesterday_count = db.prepare(
+  const yesterday_row = await db.prepare(
     'SELECT COUNT(*) as c FROM incidents WHERE created_at >= ? AND created_at < ?'
-  ).get(yesterdayStart, todayStart).c;
+  ).get(yesterdayStart, todayStart);
+  const yesterday_count = parseInt(yesterday_row.c);
 
   const change_percent = yesterday_count === 0
     ? (total_today > 0 ? 100 : 0)
     : Math.round(((total_today - yesterday_count) / yesterday_count) * 100);
 
-  const critical_watchlist = db.prepare(`
+  const critical_watchlist = await db.prepare(`
     SELECT incident_ref, category, primary_department, sla_deadline,
            (sla_deadline - ?) as time_remaining, severity, id, status,
            sla_state, created_at, sla_hours
@@ -44,7 +49,7 @@ router.get('/dashboard', auth, (req, res) => {
     LIMIT 10
   `).all(now);
 
-  const recent_activity = db.prepare(`
+  const recent_activity = await db.prepare(`
     SELECT a.created_at, a.actor, a.action, i.incident_ref, i.id as incident_id
     FROM audit_trail a
     JOIN incidents i ON a.incident_id = i.id
@@ -52,36 +57,30 @@ router.get('/dashboard', auth, (req, res) => {
     LIMIT 10
   `).all();
 
-  // Weekly by category — last 7 days
   const days = [];
-  const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
   for (let i = 6; i >= 0; i--) {
-    const dayStart = todayStart - i * 86400;
-    days.push(dayStart);
+    days.push(todayStart - i * 86400);
   }
 
   const categories = ['COD Dispute', 'Late Delivery', 'Damaged Parcel', 'Missing Parcel',
     'Wrong Address', 'System Error', 'Customer Complaint', 'Other'];
 
   const weekly_by_category = { labels: [], datasets: {} };
-
-  // Build ordered day labels starting from 7 days ago
   for (let i = 6; i >= 0; i--) {
-    const ts = todayStart - i * 86400;
-    const d = new Date(ts * 1000);
+    const d = new Date((todayStart - i * 86400) * 1000);
     weekly_by_category.labels.push(dayNames[d.getDay()]);
   }
 
   for (const cat of categories) {
-    weekly_by_category.datasets[cat] = days.map(dayStart => {
-      const row = db.prepare(`
+    const counts = [];
+    for (const dayStart of days) {
+      const row = await db.prepare(`
         SELECT COUNT(*) as c FROM incidents
         WHERE category = ? AND created_at >= ? AND created_at < ?
       `).get(cat, dayStart, dayStart + 86400);
-      return row.c;
-    });
+      counts.push(parseInt(row.c));
+    }
+    weekly_by_category.datasets[cat] = counts;
   }
 
   res.json({

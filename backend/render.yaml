@@ -1,0 +1,19 @@
+cat > ~/UIPATH_LEARNING/DHL_INCIDENT_MANAGMENT_SYSTEM/dhl-incident-system/backend/render.yaml << 'EOF'
+services:
+  - type: web
+    name: dhl-incident-backend
+    runtime: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: PORT
+        value: 10000
+EOF
