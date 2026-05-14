@@ -232,7 +232,7 @@ router.get('/summary', auth, async (req, res) => {
     const fallback_row = await db.prepare(`
       SELECT
         COUNT(*) as total,
-        SUM(CASE WHEN processed_via_fallback = true THEN 1 ELSE 0 END) as fallback_count
+        SUM(CASE WHEN processed_via_fallback = 1 THEN 1 ELSE 0 END) as fallback_count
       FROM incidents
     `).get();
 
@@ -247,7 +247,7 @@ router.get('/summary', auth, async (req, res) => {
     const avg_confidence_row = await db.prepare(`
       SELECT AVG(llm_confidence) as avg_conf
       FROM incidents
-      WHERE processed_via_fallback = false
+      WHERE processed_via_fallback = 0
       AND llm_confidence IS NOT NULL
     `).get();
     const avg_llm_confidence = avg_confidence_row?.avg_conf
