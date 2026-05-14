@@ -4,6 +4,7 @@ const NAV_ITEMS = [
   { path: '/dashboard', label: 'Dashboard', icon: '▦' },
   { path: '/upload',    label: 'Upload',    icon: '↑' },
   { path: '/incidents', label: 'Incidents', icon: '☰' },
+  { path: '/reports',   label: 'Reports',   icon: '▤' },
 ];
 
 export default function Navbar() {
