@@ -6,6 +6,7 @@ import ResetPasswordPage from './pages/ResetPasswordPage';
 import DashboardPage from './pages/DashboardPage';
 import UploadPage from './pages/UploadPage';
 import IncidentPage from './pages/IncidentPage';
+import ReportsPage from './pages/ReportsPage';
 
 function RootRedirect() {
   const token = localStorage.getItem('token');
@@ -24,6 +25,7 @@ export default function App() {
         <Route path="/upload" element={<ProtectedRoute><UploadPage /></ProtectedRoute>} />
         <Route path="/incidents" element={<ProtectedRoute><IncidentPage /></ProtectedRoute>} />
         <Route path="/incidents/:id" element={<ProtectedRoute><IncidentPage /></ProtectedRoute>} />
+        <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
