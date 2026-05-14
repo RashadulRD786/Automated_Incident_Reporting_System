@@ -25,11 +25,13 @@ const storage = multer.diskStorage({
     cb(null, `${Date.now()}_${file.originalname.replace(/\s+/g, '_')}`);
   },
 });
+
 const ALLOWED_MIMES = [
   'application/pdf',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'image/jpeg', 'image/jpg', 'image/png', 'text/plain',
 ];
+
 const upload = multer({
   storage,
   fileFilter: (req, file, cb) => {
@@ -37,6 +39,7 @@ const upload = multer({
     else cb(new Error('Unsupported file type'));
   },
 });
+
 function mimeToContentType(mime) {
   if (mime === 'application/pdf') return 'pdf';
   if (mime.includes('wordprocessing')) return 'docx';
@@ -51,7 +54,6 @@ router.post('/file', auth, (req, res) => {
     const { filename, mimetype, path: tempPath } = req.file;
     const contentType = mimeToContentType(mimetype);
     const filePath = path.join(__dirname, '..', 'uploads', filename);
-
     let rawText = null;
     try {
       if (contentType === 'text') {
@@ -64,16 +66,13 @@ router.post('/file', auth, (req, res) => {
         const result = await mammoth.extractRawText({ path: tempPath });
         rawText = result.value;
       }
-      // images: rawText stays null, handled by Image Analysis in UiPath
     } catch (e) {
       console.warn('[File extraction error]', e.message);
     }
-
     const result = await db.prepare(`
       INSERT INTO raw_inputs (filename, file_path, source_type, content_type, raw_text, processing_status)
       VALUES (?, ?, 'manual', ?, ?, 'pending')
     `).run(filename, filePath, contentType, rawText);
-
     res.json({ id: result.lastInsertRowid, filename, status: 'pending' });
   });
 });
@@ -90,6 +89,7 @@ router.post('/text', auth, async (req, res) => {
 
 router.post('/uipath', async (req, res) => {
   const { raw_input_ids, structured_incident, ocr_confidence, detected_language, missing_fields, error } = req.body;
+
   if (error) {
     if (raw_input_ids && raw_input_ids.length) {
       for (const id of raw_input_ids) {
@@ -98,14 +98,20 @@ router.post('/uipath', async (req, res) => {
     }
     return res.json({ message: 'Error logged' });
   }
+
   const si = structured_incident;
   if (!si) return res.status(400).json({ error: 'structured_incident required' });
+
   const slaHours = getSLAHours(si.severity, si.category);
   const now = Math.floor(Date.now() / 1000);
   const slaDeadline = now + slaHours * 3600;
+
   const countRow = await db.prepare("SELECT COUNT(*) as c FROM incidents").get();
   const seq = String(parseInt(countRow.c) + 1).padStart(4, '0');
   const incidentRef = `INC-${new Date().getFullYear()}-${seq}`;
+
+  const initialStatus = si.is_duplicate_likely ? 'Pending' : 'New';
+
   const incResult = await db.prepare(`
     INSERT INTO incidents (
       incident_ref, title, summary, category, severity, status,
@@ -115,9 +121,10 @@ router.post('/uipath', async (req, res) => {
       is_duplicate, duplicate_reason, processed_via_fallback,
       sla_hours, sla_deadline, sla_state,
       created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, 'New', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ON_TRACK', ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ON_TRACK', ?, ?)
   `).run(
     incidentRef, si.title, si.summary, si.category, si.severity,
+    initialStatus,
     si.primary_department,
     si.root_cause_hypothesis || si.root_cause_suggestion || null,
     si.root_cause_hypothesis || null,
@@ -130,15 +137,19 @@ router.post('/uipath', async (req, res) => {
     si.processed_via_fallback ? 1 : 0,
     slaHours, slaDeadline, now, now
   );
+
   const incidentId = incResult.lastInsertRowid;
+
   const primaryPS = si.problem_statement || `Handle ${si.category} incident.`;
   const primaryAR = si.action_required || `Investigate and resolve as primary owner.`;
   const primaryEO = si.expected_output || `Resolution report and closure confirmation.`;
+
   await db.prepare(`
     INSERT INTO department_tasks
       (incident_id, department, role, task_description, problem_statement, action_required, expected_output)
     VALUES (?, ?, 'primary', ?, ?, ?, ?)
   `).run(incidentId, si.primary_department, primaryAR, primaryPS, primaryAR, primaryEO);
+
   if (si.supporting_departments && Array.isArray(si.supporting_departments)) {
     for (const sup of si.supporting_departments) {
       await db.prepare(`
@@ -154,6 +165,7 @@ router.post('/uipath', async (req, res) => {
       );
     }
   }
+
   if (raw_input_ids && raw_input_ids.length) {
     for (const id of raw_input_ids) {
       await db.prepare(`
@@ -164,14 +176,25 @@ router.post('/uipath', async (req, res) => {
       `).run(incidentId, now, ocr_confidence || null, detected_language || null, missing_fields || null, id);
     }
   }
+
+  // Main audit trail — always runs first
   await db.prepare(`
     INSERT INTO audit_trail (incident_id, actor, action, new_value, notes)
-    VALUES (?, 'UiPath', 'Incident created via automation pipeline', 'New', ?)
-  `).run(incidentId, JSON.stringify({
+    VALUES (?, 'UiPath', 'Incident created via automation pipeline', ?, ?)
+  `).run(incidentId, initialStatus, JSON.stringify({
     confidence: si.llm_confidence || si.confidence,
     sentiment: si.sentiment_score,
     fallback: si.processed_via_fallback || false,
   }));
+
+  // Duplicate audit — only runs if duplicate detected
+  if (si.is_duplicate_likely) {
+    await db.prepare(`
+      INSERT INTO audit_trail (incident_id, actor, action, new_value, notes)
+      VALUES (?, 'UiPath', 'Flagged as potential duplicate — status set to Pending', 'Pending', ?)
+    `).run(incidentId, si.duplicate_reason || 'Similarity detected with existing incident');
+  }
+
   res.json({ incident_id: incidentId, incident_ref: incidentRef });
 });
 
