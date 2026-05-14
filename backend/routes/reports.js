@@ -303,7 +303,7 @@ router.get('/summary', auth, async (req, res) => {
           : Math.round(((tw - lw) / lw) * 100);
         return { category: r.category, this_week: tw, last_week: lw, change_percent: change };
       })
-      .filter(r => r.change_percent >= 20)
+      .filter(r => r.change_percent >= 20 && r.last_week > 0)
       .sort((a, b) => b.change_percent - a.change_percent);
 
     const breach_by_dept = await db.prepare(`
