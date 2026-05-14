@@ -6,9 +6,9 @@ const router = express.Router();
 const VALID_TRANSITIONS = {
   'New':         ['Assigned', 'Cancelled'],
   'Assigned':    ['In Progress', 'Cancelled'],
-  'In Progress': ['Pending', 'Resolved' , 'Cancelled'],
-  'Pending':     ['In Progress', 'Resolved' , 'Cancelled'],
-  'Resolved':    ['Closed' , 'Cancelled'],
+  'In Progress': ['Pending', 'Resolved', 'Cancelled'],
+  'Pending':     ['In Progress', 'Resolved', 'Cancelled'],
+  'Resolved':    ['Closed', 'Cancelled'],
 };
 
 router.get('/', auth, async (req, res) => {

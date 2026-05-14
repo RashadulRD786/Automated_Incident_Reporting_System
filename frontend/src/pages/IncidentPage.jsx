@@ -26,10 +26,10 @@ function timeAgo(ts) {
 
 const VALID_TRANSITIONS = {
   'New':         ['Assigned', 'Cancelled'],
-  'Assigned':    ['In Progress', 'Cancelled'],
-  'In Progress': ['Pending', 'Resolved'],
-  'Pending':     ['In Progress', 'Resolved'],
-  'Resolved':    ['Closed'],
+  'Assigned':    ['In Progress', 'Cancelled', 'Cancelled'],
+  'In Progress': ['Pending', 'Resolved', 'Cancelled'],
+  'Pending':     ['In Progress', 'Resolved', 'Cancelled'],
+  'Resolved':    ['Closed', 'Cancelled'],
 };
 
 const SLA_STATE_STYLES = {
