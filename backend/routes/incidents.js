@@ -8,7 +8,7 @@ const VALID_TRANSITIONS = {
   'Assigned':    ['In Progress', 'Cancelled'],
   'In Progress': ['Pending', 'Resolved', 'Cancelled'],
   'Pending':     ['In Progress', 'Resolved', 'Cancelled'],
-  'Resolved':    ['Closed', 'Cancelled'],
+  'Resolved':    ['Closed'],
 };
 
 router.get('/', auth, async (req, res) => {
