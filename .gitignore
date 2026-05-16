@@ -4,6 +4,7 @@ node_modules/
 
 # ── Environment variables (contains secrets) ──────────────────────────────────
 backend/.env
+frontend/.env
 
 # ── Database (auto-generated, seeded locally) ─────────────────────────────────
 backend/database/*.db
