@@ -264,6 +264,7 @@ SLA-triggered alerts with read/unread state, auto-deleted after 7 days.
 
 | Item | Detail |
 |---|---|
+| **Frontend URL** | https://automated-incident-reporting-system.vercel.app/ |
 | **Backend URL** | https://dhl-incident-backend.onrender.com |
 | **Admin Email** | admin@dhl.com |
 | **Admin Password** | Admin@1234 |
@@ -277,7 +278,7 @@ https://dhl-incident-backend.onrender.com/api/reports/dashboard
 
 ### Demo Walkthrough
 
-1. Open `http://localhost:3000` and log in with the admin credentials
+1. Open https://automated-incident-reporting-system.vercel.app or run locally at `http://localhost:3000` and log in with the admin credentials
 2. Check the **Dashboard** — live metrics, Critical Watch List, Weekly Trend chart
 3. Go to **Upload** — upload a PDF, DOCX, image, or paste raw text
 4. Watch the Processing Queue update to `Pending`; with UiPath running, the status changes to `Processed` within 60 seconds
@@ -341,7 +342,12 @@ VITE_API_URL=https://dhl-incident-backend.onrender.com
 ```
 
 > **Note:** The backend is already deployed on Render and the database is hosted on Supabase. No local backend or database setup is required. The UiPath automation runs as a cloud robot on UiPath Orchestrator — no local UiPath installation is needed.
-
+> **Note:** The frontend is deployed on Vercel and accessible 
+> at https://automated-incident-reporting-system.vercel.app — 
+> no local setup required to use the system. The backend is 
+> deployed on Render and the database is hosted on Supabase. 
+> The UiPath automation runs as a cloud robot on UiPath 
+> Orchestrator. Local setup is only needed for development.
 ---
 
 ## Project Structure
