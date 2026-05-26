@@ -341,13 +341,13 @@ The frontend runs at `http://localhost:3000`.
 VITE_API_URL=https://dhl-incident-backend.onrender.com
 ```
 
-> **Note:** The backend is already deployed on Render and the database is hosted on Supabase. No local backend or database setup is required. The UiPath automation runs as a cloud robot on UiPath Orchestrator — no local UiPath installation is needed.
+
 > **Note:** The frontend is deployed on Vercel and accessible 
 > at https://automated-incident-reporting-system.vercel.app — 
 > no local setup required to use the system. The backend is 
 > deployed on Render and the database is hosted on Supabase. 
-> The UiPath automation runs as a cloud robot on UiPath 
-> Orchestrator. Local setup is only needed for development.
+> The UiPath automation runs in UiPath Studio Web and must be 
+> started manually by clicking Run before each session.
 ---
 
 ## Project Structure
